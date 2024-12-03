@@ -1,3 +1,11 @@
+"""
+Web module for handling Telegram bot webhooks.
+
+This module sets up FastAPI endpoints for processing webhook updates
+for both the main bot and dynamically created minion bots.
+It provides webhook setup and update processing functionality.
+"""
+
 from urllib.parse import urljoin
 
 from aiogram import Bot
@@ -18,6 +26,15 @@ minion_bots = {}
 
 @app.get("/webhook/telegram/main")
 async def main_webhook():
+    """
+    Set up the webhook for the main Telegram bot.
+    
+    This endpoint configures the webhook URL for the main bot,
+    allowing Telegram to send updates to this specific endpoint.
+    
+    Returns:
+        dict: A status confirmation that the webhook was set up successfully.
+    """
     url = urljoin(SETTINGS.web_url, MAIN_WEBHOOK_PATH)
     await main_bot.set_webhook(url)
     return {"status": "ok"}
@@ -25,6 +42,18 @@ async def main_webhook():
 
 @app.post("/webhook/telegram/main")
 async def main_webhook(update: Update):
+    """
+    Process incoming webhook updates for the main Telegram bot.
+    
+    This endpoint receives updates from Telegram for the main bot,
+    feeds the update to the dispatcher, and streams the response.
+    
+    Args:
+        update (Update): The incoming Telegram update object.
+    
+    Returns:
+        StreamingResponse: A streaming response containing the bot's reaction to the update.
+    """
     result = await main_dispatcher.feed_webhook_update(main_bot, update)
     return StreamingResponse(
         build_response_writer(main_bot, result), media_type="multipart/form-data"
@@ -33,6 +62,19 @@ async def main_webhook(update: Update):
 
 @app.post("/webhook/telegram/{token}")
 async def minion_webhook(token: str, update: Update):
+    """
+    Process incoming webhook updates for dynamically created Telegram bots.
+    
+    This endpoint handles updates for multiple bot instances identified by their unique token.
+    If a bot with the given token doesn't exist, it is dynamically created.
+    
+    Args:
+        token (str): The unique bot token used to identify and initialize the bot.
+        update (Update): The incoming Telegram update object.
+    
+    Returns:
+        StreamingResponse: A streaming response containing the bot's reaction to the update.
+    """
     if token not in minion_bots:
         minion_bots[token] = Bot(token=token, **bot_init_params)
     bot = minion_bots[token]
