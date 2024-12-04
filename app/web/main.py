@@ -58,7 +58,7 @@ async def main_webhook(update: Update):
     if not result:
         return {}
     writer = build_response_writer(main_bot, result)
-    return StreamingResponse(writer, content_type=writer.content_type, headers=writer.headers)
+    return StreamingResponse(writer, headers=writer.headers)
 
 
 @app.post("/webhook/telegram/{token}")
