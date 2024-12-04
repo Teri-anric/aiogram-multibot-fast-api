@@ -58,7 +58,7 @@ async def main_webhook(update: Update):
     result = await main_dispatcher.feed_webhook_update(main_bot, update)
     if isinstance(result, TelegramMethod):
         await main_dispatcher.silent_call_request(main_bot, result)
-    return StreamingResponse(None, status_code=200)
+    return StreamingResponse("", status_code=200)
 
 
 @app.post("/webhook/telegram/{token}")
@@ -82,4 +82,4 @@ async def minion_webhook(token: str, update: Update):
     result = await minion_dispatcher.feed_webhook_update(bot, update)
     if isinstance(result, TelegramMethod):
         await minion_dispatcher.silent_call_request(bot, result)
-    return StreamingResponse(None, status_code=200)
+    return StreamingResponse("", status_code=200)
