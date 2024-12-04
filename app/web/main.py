@@ -36,7 +36,7 @@ async def main_webhook():
         dict: A status confirmation that the webhook was set up successfully.
     """
     url = urljoin(str(SETTINGS.web_url), MAIN_WEBHOOK_PATH)
-    await main_bot.set_webhook(url)
+    await main_bot.set_webhook(url, drop_pending_updates=True)
     return {"status": "ok"}
 
 

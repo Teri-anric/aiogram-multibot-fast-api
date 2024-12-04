@@ -23,9 +23,9 @@ async def add_minion_command(message: Message, command: CommandObject):
     try:
         minion_bot = Bot(command.args)
         url = urljoin(
-            SETTINGS.web_url, MINION_WEBHOOK_PATH.format(token=command.args)
+            str(SETTINGS.web_url), MINION_WEBHOOK_PATH.format(token=command.args)
         )
-        minion_bot.set_webhook(url=url)
+        minion_bot.set_webhook(url=url, drop_pending_updates=True)
     except TokenValidationError:
         return message.answer("Invalid token")
 
