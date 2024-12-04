@@ -55,9 +55,10 @@ async def main_webhook(update: Update):
         StreamingResponse: A streaming response containing the bot's reaction to the update.
     """
     result = await main_dispatcher.feed_webhook_update(main_bot, update)
-    return StreamingResponse(
-        build_response_writer(main_bot, result), media_type="multipart/form-data"
-    )
+    if not result:
+        return {}
+    writer = build_response_writer(main_bot, result)
+    return StreamingResponse(writer, content_type=writer.content_type, headers=writer.headers)
 
 
 @app.post("/webhook/telegram/{token}")
