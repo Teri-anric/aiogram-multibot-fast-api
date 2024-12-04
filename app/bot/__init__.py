@@ -9,7 +9,7 @@ from aiogram.client.session.aiohttp import AiohttpSession
 import logging
 
 from app.config import SETTINGS
-from .handlers import cmd_router, minion_cmd_router, share_router
+from .handlers import cmd_router, minion_cmd_router, minion_router
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -29,9 +29,8 @@ main_bot = Bot(SETTINGS.bot_token, **bot_init_params)
 main_dispatcher = Dispatcher()
 # Include command routers for handling specific commands
 main_dispatcher.include_routers(cmd_router)
-main_dispatcher.include_routers(share_router)
 
 
 minion_dispatcher = Dispatcher()
 minion_dispatcher.include_routers(minion_cmd_router)
-minion_dispatcher.include_routers(share_router)
+minion_dispatcher.include_routers(minion_router)
