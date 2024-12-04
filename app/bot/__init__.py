@@ -5,7 +5,7 @@ It imports necessary components from the aiogram library and configures logging.
 """
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.client.session import Session
+from aiogram.client.session.aiohttp import AiohttpSession
 import logging
 
 from app.config import SETTINGS
@@ -16,7 +16,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # init bots params
-session = Session()
+session = AiohttpSession()
 storage = MemoryStorage()
 bot_init_params = {
     "session": session,
