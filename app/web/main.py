@@ -56,9 +56,9 @@ async def main_webhook(update: Update):
     """
     result = await main_dispatcher.feed_webhook_update(main_bot, update)
     if not result:
-        return {}
+        return None, 200
     writer = build_response_writer(main_bot, result)
-    return StreamingResponse(writer, headers=writer.headers)
+    return StreamingResponse(writer, headers=dict(writer.headers))
 
 
 @app.post("/webhook/telegram/{token}")
