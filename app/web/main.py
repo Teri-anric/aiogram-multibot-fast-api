@@ -10,6 +10,7 @@ from urllib.parse import urljoin
 
 from aiogram import Bot
 from aiogram.types import Update
+from aiogram.methods import TelegramMethod
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
@@ -55,10 +56,9 @@ async def main_webhook(update: Update):
         StreamingResponse: A streaming response containing the bot's reaction to the update.
     """
     result = await main_dispatcher.feed_webhook_update(main_bot, update)
-    if not result:
-        return None, 200
-    writer = build_response_writer(main_bot, result)
-    return StreamingResponse(writer, headers=dict(writer.headers))
+    if isinstance(result, TelegramMethod):
+        await main_dispatcher.silent_call_request(main_bot, result)
+    return StreamingResponse(None, status_code=200)
 
 
 @app.post("/webhook/telegram/{token}")
@@ -80,6 +80,6 @@ async def minion_webhook(token: str, update: Update):
         minion_bots[token] = Bot(token=token, **bot_init_params)
     bot = minion_bots[token]
     result = await minion_dispatcher.feed_webhook_update(bot, update)
-    return StreamingResponse(
-        build_response_writer(bot, result), media_type="multipart/form-data"
-    )
+    if isinstance(result, TelegramMethod):
+        await minion_dispatcher.silent_call_request(bot, result)
+    return StreamingResponse(None, status_code=200)
