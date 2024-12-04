@@ -1,7 +1,7 @@
 from urllib.parse import urljoin
 
 from aiogram import Bot, Router
-from aiogram.exceptions import TokenValidationError
+from aiogram.utils.token import TokenValidationError
 from aiogram.filters import Command, CommandObject
 from aiogram.types import Message
 
