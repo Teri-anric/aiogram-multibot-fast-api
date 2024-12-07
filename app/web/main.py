@@ -11,12 +11,13 @@ from urllib.parse import urljoin
 from aiogram import Bot
 from aiogram.types import Update
 from aiogram.methods import TelegramMethod
+import aiohttp 
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
 
 from app.bot import (bot_init_params, main_bot, main_dispatcher,
                      minion_dispatcher)
-from app.bot.utils import build_response_writer
+from app.bot.utils import build_multipart_response
 from app.config import SETTINGS
 from app.constant import MAIN_WEBHOOK_PATH
 
@@ -57,7 +58,8 @@ async def main_webhook(update: Update):
     """
     result = await main_dispatcher.feed_webhook_update(main_bot, update)
     if isinstance(result, TelegramMethod):
-        await main_dispatcher.silent_call_request(main_bot, result)
+        multipart_writer: aiohttp.MultipartWriter = build_multipart_response(main_bot, result)
+        return StreamingResponse(multipart_writer, media_type="multipart/form-data")
     return StreamingResponse("", status_code=200)
 
 
