@@ -59,7 +59,7 @@ async def main_webhook(update: Update):
     result = await main_dispatcher.feed_webhook_update(main_bot, update)
     if isinstance(result, TelegramMethod):
         multipart_writer: aiohttp.MultipartWriter = build_multipart_response(main_bot, result)
-        return StreamingResponse(multipart_writer, media_type="multipart/form-data")
+        return StreamingResponse(multipart_writer, media_type=multipart_writer.content_type)
     return StreamingResponse("", status_code=200)
 
 
