@@ -13,7 +13,7 @@ cmd_router = Router()
 
 @cmd_router.message(Command("start"))
 async def start_command(message: Message):
-    await message.answer("Hello, create new minion with /add_minion <TOKEN>")
+    return message.answer("Hello, create new minion with /add_minion <TOKEN>")
 
 
 @cmd_router.message(Command("add_minion"))
