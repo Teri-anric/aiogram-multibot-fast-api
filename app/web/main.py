@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse
 
 from app.bot import (bot_init_params, main_bot, main_dispatcher,
                      minion_dispatcher)
-from app.bot.utils import generate_multipart_telegram_response
+from app.bot.utils import build_multipart_response
 from app.config import SETTINGS
 from app.constant import MAIN_WEBHOOK_PATH
 
@@ -55,16 +55,10 @@ async def main_webhook(update: Update):
         update (Update): The incoming Telegram update object.
     
     Returns:
-        StreamingResponse: A streaming response containing the bot's reaction to the update.
+        Response: A streaming response containing the bot's reaction to the update.
     """
     result = await main_dispatcher.feed_webhook_update(main_bot, update)
-    if isinstance(result, TelegramMethod):
-        boundary = f"webhookBoundary{secrets.token_urlsafe(16)}"
-        return StreamingResponse(
-            generate_multipart_telegram_response(main_bot, result, boundary),
-            media_type=f"multipart/form-data; boundary={boundary}"
-        )
-    return StreamingResponse("", status_code=200)
+    return build_multipart_response(main_bot, result)
 
 
 @app.post("/webhook/telegram/{token}")
@@ -80,12 +74,11 @@ async def minion_webhook(token: str, update: Update):
         update (Update): The incoming Telegram update object.
     
     Returns:
-        StreamingResponse: A streaming response containing the bot's reaction to the update.
+        Response: A streaming response containing the bot's reaction to the update.
     """
     if token not in minion_bots:
         minion_bots[token] = Bot(token=token, **bot_init_params)
     bot = minion_bots[token]
+
     result = await minion_dispatcher.feed_webhook_update(bot, update)
-    if isinstance(result, TelegramMethod):
-        await minion_dispatcher.silent_call_request(bot, result)
-    return StreamingResponse("", status_code=200)
+    return build_multipart_response(bot, result)

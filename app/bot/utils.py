@@ -8,38 +8,31 @@ and file attachments.
 
 import secrets
 import json
-from typing import Dict, Optional, Generator, Any
+from typing import Dict, Optional, Generator, Any, Union
 
 from aiogram import Bot
 from aiogram.methods import TelegramMethod
 from aiogram.methods.base import TelegramType
 from aiogram.types import InputFile
+from fastapi import Response
+from fastapi.responses import StreamingResponse
 
 def generate_multipart_telegram_response(
     bot: Bot, 
-    result: Optional[TelegramMethod[TelegramType]], 
-    boundary: Optional[str] = None
+    result: TelegramMethod[TelegramType], 
+    boundary: str
 ) -> Generator[bytes, None, None]:
     """
     Generate a multipart/form-data response for Telegram webhook.
 
     Args:
         bot (Bot): The instance of the Bot to use for handled requests.
-        result (Optional[TelegramMethod[TelegramType]]): The result of a Telegram method call.
-        boundary (Optional[str]): Custom boundary for multipart data. 
-                                  If None, a random boundary will be generated.
+        result (TelegramMethod[TelegramType]): The result of a Telegram method call.
+        boundary (str): Custom boundary for multipart data.
 
     Yields:
         bytes: Multipart form-data chunks
     """
-    # Generate boundary if not provided
-    if boundary is None:
-        boundary = f"webhookBoundary{secrets.token_urlsafe(16)}"
-    
-    # If no result is provided or result is not a TelegramMethod, yield nothing
-    if not result or not isinstance(result, TelegramMethod):
-        return
-
     # Prepare a dictionary to store file attachments
     files: Dict[str, InputFile] = {}
     
@@ -92,3 +85,18 @@ def generate_multipart_telegram_response(
 
     # Final boundary
     yield f'--{boundary}--\r\n'.encode('utf-8')
+
+
+def build_multipart_response(
+    bot: Bot, 
+    result: Any
+) -> Response:
+    if not result or not isinstance(result, TelegramMethod):
+        return Response(status_code=200)
+
+    boundary = f"webhookBoundary{secrets.token_urlsafe(16)}"
+    return StreamingResponse(
+        generate_multipart_telegram_response(bot, result, boundary), 
+        media_type=f"multipart/form-data; boundary={boundary}",
+        status_code=200
+    )
