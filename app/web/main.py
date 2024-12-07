@@ -6,6 +6,7 @@ for both the main bot and dynamically created minion bots.
 It provides webhook setup and update processing functionality.
 """
 
+import secrets
 from urllib.parse import urljoin
 
 from aiogram import Bot
@@ -17,7 +18,7 @@ from fastapi.responses import StreamingResponse
 
 from app.bot import (bot_init_params, main_bot, main_dispatcher,
                      minion_dispatcher)
-from app.bot.utils import build_multipart_response
+from app.bot.utils import generate_multipart_telegram_response
 from app.config import SETTINGS
 from app.constant import MAIN_WEBHOOK_PATH
 
@@ -58,11 +59,10 @@ async def main_webhook(update: Update):
     """
     result = await main_dispatcher.feed_webhook_update(main_bot, update)
     if isinstance(result, TelegramMethod):
-        multipart_writer: aiohttp.MultipartWriter = build_multipart_response(main_bot, result)
+        boundary = f"webhookBoundary{secrets.token_urlsafe(16)}"
         return StreamingResponse(
-            content=await multipart_writer.write(close_boundary=True),
-            media_type=multipart_writer.content_type,
-            headers=multipart_writer.headers
+            generate_multipart_telegram_response(main_bot, result, boundary),
+            media_type=f"multipart/form-data; boundary={boundary}"
         )
     return StreamingResponse("", status_code=200)
 

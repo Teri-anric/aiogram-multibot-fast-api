@@ -7,55 +7,88 @@ and file attachments.
 """
 
 import secrets
-from typing import Dict, Optional
+import json
+from typing import Dict, Optional, Generator, Any
 
 from aiogram import Bot
 from aiogram.methods import TelegramMethod
 from aiogram.methods.base import TelegramType
 from aiogram.types import InputFile
-from aiohttp import MultipartWriter
 
-def build_multipart_response(
-    bot: Bot, result: Optional[TelegramMethod[TelegramType]]
-) -> MultipartWriter:
+def generate_multipart_telegram_response(
+    bot: Bot, 
+    result: Optional[TelegramMethod[TelegramType]], 
+    boundary: Optional[str] = None
+) -> Generator[bytes, None, None]:
     """
-    Build a MultipartWriter for sending a response to a Telegram webhook.
+    Generate a multipart/form-data response for Telegram webhook.
 
     Args:
         bot (Bot): The instance of the Bot to use for handled requests.
         result (Optional[TelegramMethod[TelegramType]]): The result of a Telegram method call.
+        boundary (Optional[str]): Custom boundary for multipart data. 
+                                  If None, a random boundary will be generated.
 
-    Returns:
-        Optional[MultipartWriter]: A writer for the multipart/form-data request, or None if no result.
+    Yields:
+        bytes: Multipart form-data chunks
     """
+    # Generate boundary if not provided
+    if boundary is None:
+        boundary = f"webhookBoundary{secrets.token_urlsafe(16)}"
     
-    # Create MultipartWriter with optional boundary
-    mpwriter = MultipartWriter('form-data', f"webhookBoundary{secrets.token_urlsafe(16)}")
-    
-    # If no result is provided or result is not a TelegramMethod, return None
+    # If no result is provided or result is not a TelegramMethod, yield nothing
     if not result or not isinstance(result, TelegramMethod):
-        return mpwriter
+        return
 
     # Prepare a dictionary to store file attachments
     files: Dict[str, InputFile] = {}
     
-    # Add method as the first part
-    method_part = mpwriter.append(result.__api_method__)
-    method_part.set_content_disposition('form-data', name='method')
+    # Prepare method and its parameters
+    method_data = result.model_dump(warnings=False)
+    
+    # Yield method part
+    method_part = (
+        f'--{boundary}\r\n'
+        'Content-Disposition: form-data; name="method"\r\n'
+        'Content-Type: text/plain; charset=utf-8\r\n\r\n'
+        f'{result.__api_method__}\r\n'
+    )
+    yield method_part.encode('utf-8')
 
-    # Iterate through all result attributes and prepare their values
-    for key, value in result.model_dump(warnings=False).items():
+    # Process non-file parameters
+    for key, value in method_data.items():
         # Prepare the value, converting it to a format suitable for sending
         prepared_value = bot.session.prepare_value(value, bot=bot, files=files)
         
         if prepared_value is not None:
-            # Add each non-file value as a part
-            part = mpwriter.append(prepared_value)
-            part.set_content_disposition('form-data', name=key)
+            # Convert value to string for text parts
+            if isinstance(prepared_value, (dict, list)):
+                prepared_value = json.dumps(prepared_value)
+            
+            part = (
+                f'--{boundary}\r\n'
+                f'Content-Disposition: form-data; name="{key}"\r\n'
+                'Content-Type: text/plain; charset=utf-8\r\n\r\n'
+                f'{prepared_value}\r\n'
+            )
+            yield part.encode('utf-8')
 
-    # Append any file attachments to the writer
+    # Process file attachments
     for key, file in files.items():
-        file_part = mpwriter.append(file.read(bot))
-        file_part.set_content_disposition('form-data', name=key, filename=file.filename)
+        # Read file content
+        file_content = file.read(bot)
+        
+        # Yield file part headers
+        file_part_header = (
+            f'--{boundary}\r\n'
+            f'Content-Disposition: form-data; name="{key}"; filename="{file.filename}"\r\n'
+            f'Content-Type: application/octet-stream\r\n\r\n'
+        )
+        yield file_part_header.encode('utf-8')
+        
+        # Yield file content
+        yield file_content
+        yield b'\r\n'
 
-    return mpwriter
+    # Final boundary
+    yield f'--{boundary}--\r\n'.encode('utf-8')
